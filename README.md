@@ -1,2 +1,2 @@
 # CoolWeather
-郭霖的第一行代码中的最后一章；
+《第一行代码——Android》中的CoolWeather；
