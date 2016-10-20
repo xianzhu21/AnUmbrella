@@ -20,7 +20,7 @@ public class CoolWeatherDB {
 
     public static final int VERSION = 2;
 
-    public static boolean update = true;
+    public static boolean update = false;
 
     private static CoolWeatherDB coolWeatherDB;
 
