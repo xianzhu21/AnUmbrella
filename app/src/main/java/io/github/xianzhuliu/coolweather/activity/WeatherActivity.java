@@ -1,31 +1,31 @@
 package io.github.xianzhuliu.coolweather.activity;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.View;
 import android.view.Window;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import org.json.JSONException;
 
 import io.github.xianzhuliu.coolweather.R;
+import io.github.xianzhuliu.coolweather.service.AutoUpdateService;
 import io.github.xianzhuliu.coolweather.util.HttpCallbackListener;
 import io.github.xianzhuliu.coolweather.util.HttpUtil;
 import io.github.xianzhuliu.coolweather.util.Utility;
-
-import static android.content.ContentValues.TAG;
 
 /**
  * Created by LiuXianzhu on 20/10/2016.
  * Contact: liuxianzhu0221@gmail.com
  */
 
-public class WeatherActivity extends Activity {
+public class WeatherActivity extends Activity implements View.OnClickListener{
     private LinearLayout weatherInfoLayout;
     private TextView cityNameText;
     private TextView publishText;
@@ -33,6 +33,8 @@ public class WeatherActivity extends Activity {
     private TextView temp1Text;
     private TextView temp2Text;
     private TextView currentDateText;
+    private Button switchCity;
+    private Button refreshWeather;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +48,11 @@ public class WeatherActivity extends Activity {
         temp1Text = (TextView) findViewById(R.id.temp1);
         temp2Text = (TextView) findViewById(R.id.temp2);
         currentDateText = (TextView) findViewById(R.id.current_date);
+        switchCity = (Button) findViewById(R.id.switch_city);
+        refreshWeather = (Button) findViewById(R.id.refresh_weather);
+        switchCity.setOnClickListener(this);
+        refreshWeather.setOnClickListener(this);
+
         String locationCode = getIntent().getStringExtra("location_code");
         if (!TextUtils.isEmpty(locationCode)) {
             publishText.setText("同步中...");
@@ -58,7 +65,6 @@ public class WeatherActivity extends Activity {
     }
 
     private void queryWeatherInfo(String locationCode) {
-        Log.d(TAG, "queryWeatherInfo: locationCode=" + locationCode);
         String address = "http://www.weather.com.cn/data/cityinfo/" + locationCode + ".html";
         queryFromServer(address);
     }
@@ -103,5 +109,29 @@ public class WeatherActivity extends Activity {
         currentDateText.setText(prefs.getString("current_date", ""));
         weatherInfoLayout.setVisibility(View.VISIBLE);
         cityNameText.setVisibility(View.VISIBLE);
+        Intent service = new Intent(this, AutoUpdateService.class);
+        startService(service);
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.switch_city:
+                Intent intent = new Intent(this, ChooseAreaActivity.class);
+                intent.putExtra("from_weather_activity", true);
+                startActivity(intent);
+                finish();
+                break;
+            case R.id.refresh_weather:
+                publishText.setText("同步中...");
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+                String locationCode = prefs.getString("location_code", "");
+                if (!TextUtils.isEmpty(locationCode)) {
+                    queryWeatherInfo(locationCode);
+                }
+                break;
+            default:
+                break;
+        }
     }
 }

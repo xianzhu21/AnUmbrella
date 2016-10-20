@@ -18,6 +18,7 @@ import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -47,17 +48,20 @@ public class ChooseAreaActivity extends Activity {
     private CoolWeatherDB coolWeatherDB;
     private List<String> dataList = new ArrayList<>();
     private List<Location> locationList;
+    private List<Location> countyList = new ArrayList<>();
     private String selectedProvince;
     private String selectedCity;
     private int currentLevel;
+    private boolean isFromWeatherActivity;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.choose_area);
+        isFromWeatherActivity = getIntent().getBooleanExtra("from_weather_activity", false);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        if (prefs.getBoolean("city_selected", false)) {
+        if (prefs.getBoolean("city_selected", false) && !isFromWeatherActivity) {
             Intent intent = new Intent(this, WeatherActivity.class);
             startActivity(intent);
             finish();
@@ -78,8 +82,11 @@ public class ChooseAreaActivity extends Activity {
                     selectedCity = dataList.get(position);
                     queryCounties();
                 } else if (currentLevel == LEVEL_COUNTY) {
-                    String locationCode = locationList.get(position).getLocationCode();
-                    Intent intent=new Intent(ChooseAreaActivity.this, WeatherActivity.class);
+                    String locationCode = countyList.get(position).getLocationCode();
+                    SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(ChooseAreaActivity.this).edit();
+                    editor.putString("location_code", locationCode);
+                    editor.apply();
+                    Intent intent = new Intent(ChooseAreaActivity.this, WeatherActivity.class);
                     intent.putExtra("location_code", locationCode);
                     startActivity(intent);
                     finish();
@@ -95,15 +102,14 @@ public class ChooseAreaActivity extends Activity {
         }
         if (locationList.size() > 0) {
             dataList.clear();
-            Set<String> set = new HashSet<>();
+            LinkedHashSet<String> set = new LinkedHashSet<>();
             for (Location location : locationList) {
                 if (location.getCityName().equals(selectedCity)) {
                     set.add(location.getCountyName());
+                    countyList.add(location);
                 }
             }
             dataList.addAll(set);
-            Collator collatorChinese = Collator.getInstance(Locale.CHINESE);
-            Collections.sort(dataList, collatorChinese);
             adapter.notifyDataSetChanged();
             listView.setSelection(0);
             titleText.setText(selectedCity);
@@ -222,6 +228,10 @@ public class ChooseAreaActivity extends Activity {
         } else if (currentLevel == LEVEL_CITY) {
             queryProvinces();
         } else {
+            if (isFromWeatherActivity) {
+                Intent intent = new Intent(this, WeatherActivity.class);
+                startActivity(intent);
+            }
             finish();
         }
     }
