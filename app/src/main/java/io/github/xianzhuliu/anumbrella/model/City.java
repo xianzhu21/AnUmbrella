@@ -1,16 +1,16 @@
-package io.github.xianzhuliu.coolweather.model;
+package io.github.xianzhuliu.anumbrella.model;
 
 /**
  * Created by LiuXianzhu on 19/10/2016.
  * Contact: liuxianzhu0221@gmail.com
  */
 
-public class Location {
+public class City {
     private int id;
     private String provinceName;
     private String cityName;
     private String countyName;
-    private String locationCode;
+    private String cityId;
 
     public String getProvinceName() {
         return provinceName;
@@ -45,12 +45,12 @@ public class Location {
         this.cityName = cityName;
     }
 
-    public String getLocationCode() {
-        return locationCode;
+    public String getCityId() {
+        return cityId;
     }
 
-    public void setLocationCode(String locationCode) {
-        this.locationCode = locationCode;
+    public void setCityId(String cityId) {
+        this.cityId = cityId;
     }
 
 }

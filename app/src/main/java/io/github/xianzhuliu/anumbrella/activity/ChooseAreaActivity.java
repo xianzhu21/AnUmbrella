@@ -1,4 +1,4 @@
-package io.github.xianzhuliu.coolweather.activity;
+package io.github.xianzhuliu.anumbrella.activity;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
@@ -23,12 +23,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import io.github.xianzhuliu.coolweather.R;
-import io.github.xianzhuliu.coolweather.db.CoolWeatherDB;
-import io.github.xianzhuliu.coolweather.model.Location;
-import io.github.xianzhuliu.coolweather.util.HttpCallbackListener;
-import io.github.xianzhuliu.coolweather.util.HttpUtil;
-import io.github.xianzhuliu.coolweather.util.Utility;
+import io.github.xianzhuliu.anumbrella.R;
+import io.github.xianzhuliu.anumbrella.db.AnUmbrellaDB;
+import io.github.xianzhuliu.anumbrella.model.City;
+import io.github.xianzhuliu.anumbrella.util.HttpCallbackListener;
+import io.github.xianzhuliu.anumbrella.util.HttpUtil;
+import io.github.xianzhuliu.anumbrella.util.Utility;
 
 /**
  * Created by LiuXianzhu on 19/10/2016.
@@ -45,10 +45,10 @@ public class ChooseAreaActivity extends Activity {
     private TextView titleText;
     private ListView listView;
     private ArrayAdapter<String> adapter;
-    private CoolWeatherDB coolWeatherDB;
+    private AnUmbrellaDB anUmbrellaDB;
     private List<String> dataList = new ArrayList<>();
-    private List<Location> locationList;
-    private List<Location> countyList = new ArrayList<>();
+    private List<City> cityList;
+    private List<City> countyList = new ArrayList<>();
     private String selectedProvince;
     private String selectedCity;
     private int currentLevel;
@@ -71,7 +71,7 @@ public class ChooseAreaActivity extends Activity {
         titleText = (TextView) findViewById(R.id.title_text);
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, dataList);
         listView.setAdapter(adapter);
-        coolWeatherDB = CoolWeatherDB.getInstance(this);
+        anUmbrellaDB = AnUmbrellaDB.getInstance(this);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -82,12 +82,13 @@ public class ChooseAreaActivity extends Activity {
                     selectedCity = dataList.get(position);
                     queryCounties();
                 } else if (currentLevel == LEVEL_COUNTY) {
-                    String locationCode = countyList.get(position).getLocationCode();
+                    String cityId = countyList.get(position).getCityId();
                     SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(ChooseAreaActivity.this).edit();
-                    editor.putString("location_code", locationCode);
+                    editor.putString("city_id", cityId);
+                    editor.putBoolean("city_selected", true);
                     editor.apply();
                     Intent intent = new Intent(ChooseAreaActivity.this, WeatherActivity.class);
-                    intent.putExtra("location_code", locationCode);
+                    intent.putExtra("city_id", cityId);
                     startActivity(intent);
                     finish();
                 }
@@ -97,16 +98,16 @@ public class ChooseAreaActivity extends Activity {
     }
 
     private void queryCounties() {
-        if (locationList == null || locationList.isEmpty()) {
-            locationList = coolWeatherDB.loadLocations();
+        if (cityList == null || cityList.isEmpty()) {
+            cityList = anUmbrellaDB.loadCities();
         }
-        if (locationList.size() > 0) {
+        if (cityList.size() > 0) {
             dataList.clear();
             LinkedHashSet<String> set = new LinkedHashSet<>();
-            for (Location location : locationList) {
-                if (location.getCityName().equals(selectedCity)) {
-                    set.add(location.getCountyName());
-                    countyList.add(location);
+            for (City city : cityList) {
+                if (city.getCityName().equals(selectedCity)) {
+                    set.add(city.getCountyName());
+                    countyList.add(city);
                 }
             }
             dataList.addAll(set);
@@ -121,15 +122,15 @@ public class ChooseAreaActivity extends Activity {
 
 
     private void queryCities() {
-        if (locationList == null || locationList.isEmpty()) {
-            locationList = coolWeatherDB.loadLocations();
+        if (cityList == null || cityList.isEmpty()) {
+            cityList = anUmbrellaDB.loadCities();
         }
-        if (locationList.size() > 0) {
+        if (cityList.size() > 0) {
             dataList.clear();
             Set<String> set = new HashSet<>();
-            for (Location location : locationList) {
-                if (location.getProvinceName().equals(selectedProvince)) {
-                    set.add(location.getCityName());
+            for (City city : cityList) {
+                if (city.getProvinceName().equals(selectedProvince)) {
+                    set.add(city.getCityName());
                 }
             }
             dataList.addAll(set);
@@ -145,37 +146,33 @@ public class ChooseAreaActivity extends Activity {
     }
 
     private void queryProvinces() {
-        if (locationList == null || locationList.isEmpty()) {
-            locationList = coolWeatherDB.loadLocations();
+        if (cityList == null || cityList.isEmpty()) {
+            cityList = anUmbrellaDB.loadCities();
         }
-        if (locationList.size() > 0 && !CoolWeatherDB.update) {
+        if (cityList.size() > 0 && !AnUmbrellaDB.update) {
             dataList.clear();
-            Set<String> set = new HashSet<>();
-            for (Location location : locationList) {
-                set.add(location.getProvinceName());
+            Set<String> set = new LinkedHashSet<>();
+            for (City city : cityList) {
+                set.add(city.getProvinceName());
             }
             dataList.addAll(set);
-            for (String s : dataList) {
-            }
-            Collator collatorChinese = Collator.getInstance(Locale.CHINESE);
-            Collections.sort(dataList, collatorChinese);
             adapter.notifyDataSetChanged();
             listView.setSelection(0);
             titleText.setText("中国");
             currentLevel = LEVEL_PROVINCE;
         } else {
             queryFromServer("province");
-            CoolWeatherDB.update = false;
+            AnUmbrellaDB.update = false;
         }
     }
 
     private void queryFromServer(final String type) {
         showProgressDialog();
-        HttpUtil.getLocationsFromFile(ChooseAreaActivity.this, new HttpCallbackListener() {
+        HttpUtil.getCitiesFromFile(ChooseAreaActivity.this, new HttpCallbackListener() {
             @Override
             public void onFinish(String response) {
                 boolean result;
-                result = Utility.handleLocationsResponse(coolWeatherDB, response);
+                result = Utility.handleCitiesResponse(anUmbrellaDB, response);
                 if (result) {
                     runOnUiThread(new Runnable() {
                         @Override

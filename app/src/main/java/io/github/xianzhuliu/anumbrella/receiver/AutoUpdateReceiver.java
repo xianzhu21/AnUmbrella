@@ -1,10 +1,10 @@
-package io.github.xianzhuliu.coolweather.receiver;
+package io.github.xianzhuliu.anumbrella.receiver;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-import io.github.xianzhuliu.coolweather.service.AutoUpdateService;
+import io.github.xianzhuliu.anumbrella.service.AutoUpdateService;
 
 /**
  * Created by LiuXianzhu on 21/10/2016.

@@ -1,4 +1,4 @@
-package io.github.xianzhuliu.coolweather.service;
+package io.github.xianzhuliu.anumbrella.service;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -12,9 +12,11 @@ import android.support.annotation.Nullable;
 
 import org.json.JSONException;
 
-import io.github.xianzhuliu.coolweather.util.HttpCallbackListener;
-import io.github.xianzhuliu.coolweather.util.HttpUtil;
-import io.github.xianzhuliu.coolweather.util.Utility;
+import java.io.IOException;
+
+import io.github.xianzhuliu.anumbrella.util.HttpCallbackListener;
+import io.github.xianzhuliu.anumbrella.util.HttpUtil;
+import io.github.xianzhuliu.anumbrella.util.Utility;
 
 /**
  * Created by LiuXianzhu on 21/10/2016.
@@ -47,14 +49,17 @@ public class AutoUpdateService extends Service {
 
     private void updateWeather() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String locationCode = prefs.getString("location_code", "");
-        String address = "http://www.weather.com.cn/data/cityinfo/" + locationCode + ".html";
+        String cityId = prefs.getString("city_id", "");
+        String address = "https://api.heweather.com/x3/weather?cityid=CN" + cityId +
+                "&key=b722b324cb4a43c39bd1ca487cc89d7c";
         HttpUtil.sendHttpRequest(address, new HttpCallbackListener() {
             @Override
             public void onFinish(String response) {
                 try {
                     Utility.handleWeatherResponse(AutoUpdateService.this, response);
                 } catch (JSONException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
                     e.printStackTrace();
                 }
             }

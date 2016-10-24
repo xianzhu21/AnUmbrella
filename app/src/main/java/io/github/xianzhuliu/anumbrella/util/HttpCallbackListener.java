@@ -1,4 +1,4 @@
-package io.github.xianzhuliu.coolweather.util;
+package io.github.xianzhuliu.anumbrella.util;
 
 /**
  * Created by LiuXianzhu on 19/10/2016.

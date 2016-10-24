@@ -1,4 +1,4 @@
-package io.github.xianzhuliu.coolweather;
+package io.github.xianzhuliu.anumbrella;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;

@@ -1,4 +1,4 @@
-package io.github.xianzhuliu.coolweather.util;
+package io.github.xianzhuliu.anumbrella.util;
 
 import android.content.Context;
 
@@ -9,7 +9,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import io.github.xianzhuliu.coolweather.R;
+import io.github.xianzhuliu.anumbrella.R;
 
 /**
  * Created by LiuXianzhu on 19/10/2016.
@@ -30,12 +30,13 @@ public class HttpUtil {
                     connection.setConnectTimeout(8000);
                     connection.setReadTimeout(8000);
                     InputStream inputStream = connection.getInputStream();
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
                     StringBuilder response = new StringBuilder();
                     String line;
                     while ((line = reader.readLine()) != null) {
                         response.append(line);
                     }
+                    reader.close();
                     if (listener != null) {
                         listener.onFinish(response.toString());
                     }
@@ -52,19 +53,17 @@ public class HttpUtil {
         }).start();
     }
 
-    public static void getLocationsFromFile(final Context context, final HttpCallbackListener listener) {
+    public static void getCitiesFromFile(final Context context, final HttpCallbackListener listener) {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                InputStream in = context.getResources().openRawResource(R.raw.citycode);
+                InputStream in = context.getResources().openRawResource(R.raw.city_id);
                 BufferedReader reader = new BufferedReader(new InputStreamReader(in));
                 String line;
                 StringBuilder response = new StringBuilder();
                 try {
                     while ((line = reader.readLine()) != null) {
-                        if (!line.isEmpty()) {
-                            response.append(line + ";");
-                        }
+                        response.append(line + ";");
                     }
                     if (listener != null) {
                         listener.onFinish(response.toString());

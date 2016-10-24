@@ -1,4 +1,4 @@
-package io.github.xianzhuliu.coolweather.activity;
+package io.github.xianzhuliu.anumbrella.activity;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -12,13 +12,25 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.google.gson.Gson;
+
 import org.json.JSONException;
 
-import io.github.xianzhuliu.coolweather.R;
-import io.github.xianzhuliu.coolweather.service.AutoUpdateService;
-import io.github.xianzhuliu.coolweather.util.HttpCallbackListener;
-import io.github.xianzhuliu.coolweather.util.HttpUtil;
-import io.github.xianzhuliu.coolweather.util.Utility;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import io.github.xianzhuliu.anumbrella.R;
+import io.github.xianzhuliu.anumbrella.model.Weather;
+import io.github.xianzhuliu.anumbrella.service.AutoUpdateService;
+import io.github.xianzhuliu.anumbrella.util.HttpCallbackListener;
+import io.github.xianzhuliu.anumbrella.util.HttpUtil;
+import io.github.xianzhuliu.anumbrella.util.Utility;
 
 /**
  * Created by LiuXianzhu on 20/10/2016.
@@ -26,6 +38,7 @@ import io.github.xianzhuliu.coolweather.util.Utility;
  */
 
 public class WeatherActivity extends Activity implements View.OnClickListener{
+    private static final String TAG = "WeatherActivity";
     private LinearLayout weatherInfoLayout;
     private TextView cityNameText;
     private TextView publishText;
@@ -35,6 +48,8 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
     private TextView currentDateText;
     private Button switchCity;
     private Button refreshWeather;
+    private Weather weather;
+    private String cityId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,19 +68,20 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
         switchCity.setOnClickListener(this);
         refreshWeather.setOnClickListener(this);
 
-        String locationCode = getIntent().getStringExtra("location_code");
-        if (!TextUtils.isEmpty(locationCode)) {
+        cityId = getIntent().getStringExtra("city_id");
+        if (!TextUtils.isEmpty(cityId)) {
             publishText.setText("同步中...");
             weatherInfoLayout.setVisibility(View.INVISIBLE);
             cityNameText.setVisibility(View.INVISIBLE);
-            queryWeatherInfo(locationCode);
+            queryWeatherInfo(cityId);
         } else {
             showWeather();
         }
     }
 
-    private void queryWeatherInfo(String locationCode) {
-        String address = "http://www.weather.com.cn/data/cityinfo/" + locationCode + ".html";
+    private void queryWeatherInfo(String cityId) {
+        String address = "https://api.heweather.com/x3/weather?cityid=CN" + cityId +
+                "&key=b722b324cb4a43c39bd1ca487cc89d7c";
         queryFromServer(address);
     }
 
@@ -78,7 +94,10 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
                 } catch (JSONException e) {
                     e.printStackTrace();
                     new RuntimeException("JSONException");
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
+
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -100,17 +119,42 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
     }
 
     private void showWeather() {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        cityNameText.setText(prefs.getString("city_name", ""));
-        temp1Text.setText(prefs.getString("temp1", ""));
-        temp2Text.setText(prefs.getString("temp2", ""));
-        weatherDespText.setText(prefs.getString("weather_desp", ""));
-        publishText.setText("今天" + prefs.getString("publish_time", "") + "发布");
-        currentDateText.setText(prefs.getString("current_date", ""));
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy年M月d日");
+        File[] files = new File(getCacheDir() + "/" + cityId).listFiles();
+        if (files == null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+            cityId = prefs.getString("city_id", null);
+            if (TextUtils.isEmpty(cityId)) {
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putBoolean("city_selected", false);
+                editor.apply();
+                Intent intent = new Intent(WeatherActivity.this, ChooseAreaActivity.class);
+                startActivity(intent);
+                finish();
+                return;
+            }
+            queryWeatherInfo(cityId);
+        } else {
+            try {
+                FileInputStream fileInputStream = new FileInputStream(files[0]);
+                InputStreamReader reader = new InputStreamReader(fileInputStream, "UTF-8");
+                Gson gson = new Gson();
+                weather = gson.fromJson(reader, Weather.class);
+            } catch (FileNotFoundException | UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+
+            cityNameText.setText(weather.basic.city);
+            temp1Text.setText(weather.daily_forecast.get(0).tmp.min + "°C");
+            temp2Text.setText(weather.daily_forecast.get(0).tmp.max + "°C");
+            weatherDespText.setText(weather.now.cond.txt + " " + weather.now.tmp + "°C");
+            publishText.setText(weather.basic.update.loc + "发布");
+            currentDateText.setText(simpleDateFormat.format(new Date()));
         weatherInfoLayout.setVisibility(View.VISIBLE);
         cityNameText.setVisibility(View.VISIBLE);
         Intent service = new Intent(this, AutoUpdateService.class);
         startService(service);
+        }
     }
 
     @Override
@@ -124,11 +168,7 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
                 break;
             case R.id.refresh_weather:
                 publishText.setText("同步中...");
-                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-                String locationCode = prefs.getString("location_code", "");
-                if (!TextUtils.isEmpty(locationCode)) {
-                    queryWeatherInfo(locationCode);
-                }
+                queryWeatherInfo(cityId);
                 break;
             default:
                 break;
