@@ -9,13 +9,19 @@ import android.os.IBinder;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
+import android.widget.Toast;
+
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 
-import io.github.xianzhuliu.anumbrella.util.HttpCallbackListener;
-import io.github.xianzhuliu.anumbrella.util.HttpUtil;
 import io.github.xianzhuliu.anumbrella.util.Utility;
 
 /**
@@ -24,6 +30,7 @@ import io.github.xianzhuliu.anumbrella.util.Utility;
  */
 
 public class AutoUpdateService extends Service {
+    RequestQueue mQueue;
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -52,7 +59,29 @@ public class AutoUpdateService extends Service {
         String cityId = prefs.getString("city_id", "");
         String address = "https://api.heweather.com/x3/weather?cityid=CN" + cityId +
                 "&key=b722b324cb4a43c39bd1ca487cc89d7c";
-        HttpUtil.sendHttpRequest(address, new HttpCallbackListener() {
+
+        if (mQueue == null) {
+            mQueue = Volley.newRequestQueue(this);
+        }
+        JsonObjectRequest jsonRequest = new JsonObjectRequest(address, null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject response) {
+                try {
+                    Utility.handleWeatherResponse(AutoUpdateService.this, response);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Toast.makeText(AutoUpdateService.this, error.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+        mQueue.add(jsonRequest);
+        /*HttpUtil.sendHttpRequest(address, new HttpCallbackListener() {
             @Override
             public void onFinish(String response) {
                 try {
@@ -68,6 +97,6 @@ public class AutoUpdateService extends Service {
             public void onError(Exception e) {
                 e.printStackTrace();
             }
-        });
+        });*/
     }
 }

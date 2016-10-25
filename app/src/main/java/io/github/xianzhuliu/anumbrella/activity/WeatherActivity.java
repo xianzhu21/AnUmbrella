@@ -3,18 +3,22 @@ package io.github.xianzhuliu.anumbrella.activity;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.android.volley.RequestQueue;
 import com.google.gson.Gson;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -48,8 +52,40 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
     private TextView currentDateText;
     private Button switchCity;
     private Button refreshWeather;
+    private ImageView imgWeather;
     private Weather weather;
     private String cityId;
+    private RequestQueue mQueue;
+    private HttpCallbackListener httpCallbackListener = new HttpCallbackListener() {
+        @Override
+        public void onFinish(String response) {
+            try {
+                Utility.handleWeatherResponse(WeatherActivity.this, new JSONObject(response));
+            } catch (JSONException e) {
+                e.printStackTrace();
+                new RuntimeException("JSONException");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    showWeather();
+                }
+            });
+        }
+
+        @Override
+        public void onError(Exception e) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    publishText.setText("更新失败，请检查网络后重试。");
+                }
+            });
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +101,7 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
         currentDateText = (TextView) findViewById(R.id.current_date);
         switchCity = (Button) findViewById(R.id.switch_city);
         refreshWeather = (Button) findViewById(R.id.refresh_weather);
+        imgWeather = (ImageView) findViewById(R.id.img_weather);
         switchCity.setOnClickListener(this);
         refreshWeather.setOnClickListener(this);
 
@@ -86,36 +123,41 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
     }
 
     private void queryFromServer(final String address) {
-        HttpUtil.sendHttpRequest(address, new HttpCallbackListener() {
+        /**
+         * 使用Volley
+         */
+        /*if (mQueue == null) {
+            mQueue = Volley.newRequestQueue(this);
+        }
+        JsonObjectRequest jsonRequest = new JsonObjectRequest(address, null, new Response.Listener<JSONObject>() {
             @Override
-            public void onFinish(String response) {
+            public void onResponse(JSONObject response) {
                 try {
                     Utility.handleWeatherResponse(WeatherActivity.this, response);
                 } catch (JSONException e) {
                     e.printStackTrace();
-                    new RuntimeException("JSONException");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        showWeather();
-                    }
-                });
+                showWeather();
             }
-
+        }, new Response.ErrorListener() {
             @Override
-            public void onError(Exception e) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        publishText.setText("同步失败");
-                    }
-                });
+            public void onErrorResponse(VolleyError error) {
+                publishText.setText("更新失败，请检查网络后重试。");
             }
         });
+        mQueue.add(jsonRequest);*/
+
+        /**
+         * 使用OkHttp
+         */
+        HttpUtil.sendOkHttp(address, httpCallbackListener);
+
+        /**
+         * 使用HttpUrlConnection
+         */
+        /*HttpUtil.sendHttpRequest(address, new MyHttpCallBackListener());*/
     }
 
     private void showWeather() {
@@ -144,18 +186,28 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
                 e.printStackTrace();
             }
 
+            try {
+                FileInputStream fis = new FileInputStream(getCacheDir().getAbsolutePath() + "/condImg/" + weather.now.cond.code +
+                        ".png");
+                imgWeather.setImageBitmap(BitmapFactory.decodeStream(fis));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+
+
             cityNameText.setText(weather.basic.city);
             temp1Text.setText(weather.daily_forecast.get(0).tmp.min + "°C");
             temp2Text.setText(weather.daily_forecast.get(0).tmp.max + "°C");
             weatherDespText.setText(weather.now.cond.txt + " " + weather.now.tmp + "°C");
             publishText.setText(weather.basic.update.loc + "发布");
             currentDateText.setText(simpleDateFormat.format(new Date()));
-        weatherInfoLayout.setVisibility(View.VISIBLE);
-        cityNameText.setVisibility(View.VISIBLE);
-        Intent service = new Intent(this, AutoUpdateService.class);
-        startService(service);
+            weatherInfoLayout.setVisibility(View.VISIBLE);
+            cityNameText.setVisibility(View.VISIBLE);
+            Intent service = new Intent(this, AutoUpdateService.class);
+            startService(service);
         }
     }
+
 
     @Override
     public void onClick(View v) {

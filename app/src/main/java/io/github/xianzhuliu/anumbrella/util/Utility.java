@@ -1,15 +1,24 @@
 package io.github.xianzhuliu.anumbrella.util;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.text.TextUtils;
 import android.util.Log;
+
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.ImageRequest;
+import com.android.volley.toolbox.Volley;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 
 import io.github.xianzhuliu.anumbrella.db.AnUmbrellaDB;
@@ -42,15 +51,44 @@ public class Utility {
         return false;
     }
 
-    public static void handleWeatherResponse(Context context, String response) throws JSONException, IOException {
-        JSONObject jsonObject = new JSONObject(response);
-        JSONObject weatherInfo = jsonObject.getJSONArray("HeWeather data service 3.0").getJSONObject(0);
+    public static void handleWeatherResponse(Context context, JSONObject response) throws JSONException, IOException {
+        JSONObject weatherInfo = response.getJSONArray("HeWeather data service 3.0").getJSONObject(0);
         if (weatherInfo.getString("status").equals("ok")) {
             String newDate = weatherInfo.getJSONObject("basic").getJSONObject("update").getString("loc");
             String cityId = weatherInfo.getJSONObject("basic").getString("id");
+            final String condCode = weatherInfo.getJSONObject("now").getJSONObject("cond").getString("code");
 
+            final String imgPath = context.getCacheDir().getAbsolutePath() + "/condImg";
+            if (!new File(imgPath, condCode + ".png").exists()) {
+                String condUrl = "http://files.heweather.com/cond_icon/" + condCode + ".png";
+
+                RequestQueue queue = Volley.newRequestQueue(context);
+                ImageRequest imageRequest = new ImageRequest(condUrl, new Response.Listener<Bitmap>() {
+                    @Override
+                    public void onResponse(Bitmap response) {
+                        File dir = new File(imgPath);
+                        dir.mkdirs();
+                        File img = new File(dir, condCode + ".png");
+                        try {
+                            OutputStream outputStream = new FileOutputStream(img);
+                            response.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
+                            outputStream.close();
+                        } catch (FileNotFoundException e) {
+                            e.printStackTrace();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, 0, 0, Bitmap.Config.RGB_565, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+
+                    }
+                });
+                queue.add(imageRequest);
+            }
             boolean cached = true; // 是否存在缓存，true存在，false不存在或需要更新
-            String path = context.getCacheDir() + "/" + cityId.substring(2, cityId.length());
+            String path = context.getCacheDir().getAbsolutePath() + "/" + cityId.substring(2, cityId.length());
             File dir = new File(path);
             if (!dir.exists()) {
                 dir.mkdirs();
