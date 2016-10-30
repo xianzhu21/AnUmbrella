@@ -10,7 +10,7 @@ public class City {
     private String provinceName;
     private String cityName;
     private String countyName;
-    private String cityId;
+    private String cityCode;
 
     public String getProvinceName() {
         return provinceName;
@@ -45,12 +45,12 @@ public class City {
         this.cityName = cityName;
     }
 
-    public String getCityId() {
-        return cityId;
+    public String getCityCode() {
+        return cityCode;
     }
 
-    public void setCityId(String cityId) {
-        this.cityId = cityId;
+    public void setCityCode(String cityCode) {
+        this.cityCode = cityCode;
     }
 
 }

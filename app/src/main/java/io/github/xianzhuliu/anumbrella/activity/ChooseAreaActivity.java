@@ -2,10 +2,7 @@ package io.github.xianzhuliu.anumbrella.activity;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
-import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.view.View;
 import android.view.Window;
 import android.widget.AdapterView;
@@ -14,6 +11,10 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -59,14 +60,6 @@ public class ChooseAreaActivity extends Activity {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.choose_area);
-        isFromWeatherActivity = getIntent().getBooleanExtra("from_weather_activity", false);
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        if (prefs.getBoolean("city_selected", false) && !isFromWeatherActivity) {
-            Intent intent = new Intent(this, WeatherActivity.class);
-            startActivity(intent);
-            finish();
-            return;
-        }
         listView = (ListView) findViewById(R.id.list_view);
         titleText = (TextView) findViewById(R.id.title_text);
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, dataList);
@@ -82,14 +75,27 @@ public class ChooseAreaActivity extends Activity {
                     selectedCity = dataList.get(position);
                     queryCounties();
                 } else if (currentLevel == LEVEL_COUNTY) {
-                    String cityId = countyList.get(position).getCityId();
-                    SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(ChooseAreaActivity.this).edit();
-                    editor.putString("city_id", cityId);
-                    editor.putBoolean("city_selected", true);
-                    editor.apply();
-                    Intent intent = new Intent(ChooseAreaActivity.this, WeatherActivity.class);
-                    intent.putExtra("city_id", cityId);
-                    startActivity(intent);
+                    City city = countyList.get(position);
+                    final int myCityId = (int) anUmbrellaDB.saveMyCity(city);
+                    String address = "https://api.heweather.com/x3/weather?cityid=" + city.getCityCode() +
+                            "&key=b722b324cb4a43c39bd1ca487cc89d7c";
+                    HttpUtil.sendOkHttp(address, new HttpCallbackListener() {
+                        @Override
+                        public void onFinish(String response) {
+                            try {
+                                Utility.handleWeatherResponse(ChooseAreaActivity.this, new JSONObject(response),
+                                        myCityId);
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        @Override
+                        public void onError(Exception e) {
+                        }
+                    });
                     finish();
                 }
             }
@@ -225,11 +231,7 @@ public class ChooseAreaActivity extends Activity {
         } else if (currentLevel == LEVEL_CITY) {
             queryProvinces();
         } else {
-            if (isFromWeatherActivity) {
-                Intent intent = new Intent(this, WeatherActivity.class);
-                startActivity(intent);
-            }
-            finish();
+            super.onBackPressed();
         }
     }
 }

@@ -1,4 +1,17 @@
 <resources>
     <string name="app_name">An Umbrella</string>
     <string name="to">~</string>
+    <string name="title_activity_main">MainActivity</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+
+    <string name="update_weather">刷新</string>
+    <string name="menu_about">关于</string>
+    <string name="menu_setting">设置</string>
+    <string name="menu_city">管理城市</string>
+    <string name="title_activity_city">城市管理</string>
+    <string name="title_activity_main2">Main2Activity</string>
+
+    <string name="action_settings">Settings</string>
 </resources>

@@ -16,7 +16,11 @@ public class AnUmbrellaOpenHelper extends SQLiteOpenHelper {
             + "province_name text, "
             + "city_name text, "
             + "county_name text, "
-            + "city_id text)";
+            + "city_code text)";
+    public static final String CREATE_MY_CITY = "create table MyCity ("
+            + "id integer primary key autoincrement, "
+            + "city_id integer, "
+            + "weather text)";
 
     public AnUmbrellaOpenHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
@@ -25,6 +29,7 @@ public class AnUmbrellaOpenHelper extends SQLiteOpenHelper {
     @Override
     public void onCreate(SQLiteDatabase db) {
         db.execSQL(CREATE_CITY);
+        db.execSQL(CREATE_MY_CITY);
     }
 
     @Override

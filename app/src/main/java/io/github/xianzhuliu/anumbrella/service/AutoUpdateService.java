@@ -4,24 +4,24 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.IBinder;
 import android.os.SystemClock;
-import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.widget.Toast;
 
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.Volley;
+import com.google.gson.Gson;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.List;
 
+import io.github.xianzhuliu.anumbrella.db.AnUmbrellaDB;
+import io.github.xianzhuliu.anumbrella.model.MyCity;
+import io.github.xianzhuliu.anumbrella.model.Weather;
+import io.github.xianzhuliu.anumbrella.util.HttpCallbackListener;
+import io.github.xianzhuliu.anumbrella.util.HttpUtil;
 import io.github.xianzhuliu.anumbrella.util.Utility;
 
 /**
@@ -30,7 +30,6 @@ import io.github.xianzhuliu.anumbrella.util.Utility;
  */
 
 public class AutoUpdateService extends Service {
-    RequestQueue mQueue;
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -55,48 +54,33 @@ public class AutoUpdateService extends Service {
     }
 
     private void updateWeather() {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String cityId = prefs.getString("city_id", "");
-        String address = "https://api.heweather.com/x3/weather?cityid=CN" + cityId +
-                "&key=b722b324cb4a43c39bd1ca487cc89d7c";
+        AnUmbrellaDB anUmbrellaDB = AnUmbrellaDB.getInstance(this);
+        List<MyCity> myCityList = anUmbrellaDB.loadMyCities();
+        for (final MyCity myCity : myCityList) {
+            Gson gson = new Gson();
+            Weather weather = gson.fromJson(myCity.getWeather(), Weather.class);
 
-        if (mQueue == null) {
-            mQueue = Volley.newRequestQueue(this);
+            String cityCode = weather.basic.id;
+            String address = "https://api.heweather.com/x3/weather?cityid=" + cityCode +
+                    "&key=b722b324cb4a43c39bd1ca487cc89d7c";
+            HttpUtil.sendOkHttp(address, new HttpCallbackListener() {
+                @Override
+                public void onFinish(String response) {
+                    try {
+                        Utility.handleWeatherResponse(AutoUpdateService.this, new JSONObject(response), myCity.getId());
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                        new RuntimeException("JSONException");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onError(Exception e) {
+                    Toast.makeText(AutoUpdateService.this, "更新失败，请检查网络后重试。", Toast.LENGTH_SHORT).show();
+                }
+            });
         }
-        JsonObjectRequest jsonRequest = new JsonObjectRequest(address, null, new Response.Listener<JSONObject>() {
-            @Override
-            public void onResponse(JSONObject response) {
-                try {
-                    Utility.handleWeatherResponse(AutoUpdateService.this, response);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Toast.makeText(AutoUpdateService.this, error.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
-        mQueue.add(jsonRequest);
-        /*HttpUtil.sendHttpRequest(address, new HttpCallbackListener() {
-            @Override
-            public void onFinish(String response) {
-                try {
-                    Utility.handleWeatherResponse(AutoUpdateService.this, response);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            @Override
-            public void onError(Exception e) {
-                e.printStackTrace();
-            }
-        });*/
     }
 }
