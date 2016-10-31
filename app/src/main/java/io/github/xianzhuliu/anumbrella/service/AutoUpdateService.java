@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.support.annotation.Nullable;
-import android.widget.Toast;
 
 import com.google.gson.Gson;
 
@@ -80,7 +79,6 @@ public class AutoUpdateService extends Service {
 
                 @Override
                 public void onError(Exception e) {
-                    Toast.makeText(AutoUpdateService.this, "更新失败，请检查网络后重试。", Toast.LENGTH_SHORT).show();
                 }
             });
         }

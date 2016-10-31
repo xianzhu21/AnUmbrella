@@ -8,6 +8,7 @@ import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Toast;
 
 import com.baoyz.swipemenulistview.SwipeMenu;
@@ -62,7 +63,6 @@ public class CityActivity extends AppCompatActivity {
             String tmp = ""; // 气温
             int cond = -1; // 天气情况图
             String weatherInfo = myCity.getWeather();
-            Log.d(TAG, "onStart: weatherInfo=" + weatherInfo);
             if (!TextUtils.isEmpty(weatherInfo)) {
                 Gson gson = new Gson();
                 Weather weather = gson.fromJson(weatherInfo, Weather.class);
@@ -105,6 +105,13 @@ public class CityActivity extends AppCompatActivity {
                         break;
                 }
                 return false;
+            }
+        });
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                MainActivity.selectedCity = position;
+                finish();
             }
         });
     }

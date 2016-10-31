@@ -52,6 +52,7 @@ public class MainActivity extends AppCompatActivity
     private Toolbar toolbar;
     private List<MyCity> myCityList;
     private AnUmbrellaDB anUmbrellaDB;
+    public static int selectedCity = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +72,12 @@ public class MainActivity extends AppCompatActivity
         imgWeather = (ImageView) findViewById(R.id.img_weather);
 
         anUmbrellaDB = AnUmbrellaDB.getInstance(this);
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
         myCityList = anUmbrellaDB.loadMyCities();
         if (myCityList.isEmpty()) {
             tempText.setText("请先添加城市");
@@ -142,7 +149,7 @@ public class MainActivity extends AppCompatActivity
                 boolean success = false;
                 try {
                     success = Utility.handleWeatherResponse(MainActivity.this, new JSONObject(response), myCityList
-                            .get(0).getId());
+                            .get(selectedCity).getId());
                 } catch (JSONException e) {
                     e.printStackTrace();
                     new RuntimeException("JSONException");
@@ -179,12 +186,12 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void showWeather() {
-        City city = anUmbrellaDB.findCityById(myCityList.get(0).getCityId());
+        City city = anUmbrellaDB.findCityById(myCityList.get(selectedCity).getCityId());
         toolbar.setTitle(city.getCountyName());
         cityCode = city.getCityCode();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy年M月d日");
         Gson gson = new Gson();
-        weather = gson.fromJson(myCityList.get(0).getWeather(), Weather.class);
+        weather = gson.fromJson(myCityList.get(selectedCity).getWeather(), Weather.class);
         if (weather == null) {
             Toast.makeText(this, "貌似网络断开了，请连接网络后刷新~_~", Toast.LENGTH_SHORT).show();
         } else {
