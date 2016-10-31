@@ -12,6 +12,7 @@ import java.util.List;
 
 import io.github.xianzhuliu.anumbrella.R;
 import io.github.xianzhuliu.anumbrella.model.MyCityBean;
+import io.github.xianzhuliu.anumbrella.util.WeatherCode;
 
 /**
  * Created by LiuXianzhu on 27/10/2016.
@@ -60,7 +61,7 @@ public class MyCityAdapter extends BaseAdapter {
         MyCityBean bean = mList.get(position);
         holder.myCityName.setText(bean.getMyCityName());
         holder.myCityTmp.setText(bean.getMyCityTmp());
-        holder.imgMyCity.setImageResource(bean.getMyCityImgResId());
+        holder.imgMyCity.setImageResource(WeatherCode.getWeatherCode(bean.getMyCityWeatherCode()));
 
         return convertView;
     }

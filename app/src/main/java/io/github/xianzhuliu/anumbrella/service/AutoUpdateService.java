@@ -60,14 +60,16 @@ public class AutoUpdateService extends Service {
             Gson gson = new Gson();
             Weather weather = gson.fromJson(myCity.getWeather(), Weather.class);
 
-            String cityCode = weather.basic.id;
+            String cityCode = anUmbrellaDB.findCityById(myCity.getCityId()).getCityCode();
             String address = "https://api.heweather.com/x3/weather?cityid=" + cityCode +
                     "&key=b722b324cb4a43c39bd1ca487cc89d7c";
             HttpUtil.sendOkHttp(address, new HttpCallbackListener() {
                 @Override
                 public void onFinish(String response) {
                     try {
-                        Utility.handleWeatherResponse(AutoUpdateService.this, new JSONObject(response), myCity.getId());
+                        if (!Utility.handleWeatherResponse(AutoUpdateService.this, new JSONObject(response), myCity
+                                .getId())) {
+                        }
                     } catch (JSONException e) {
                         e.printStackTrace();
                         new RuntimeException("JSONException");

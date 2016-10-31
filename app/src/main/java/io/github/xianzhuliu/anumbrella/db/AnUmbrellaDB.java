@@ -90,6 +90,23 @@ public class AnUmbrellaDB {
         return city;
     }
 
+    public City findCityByName(String countyName) {
+        Cursor cursor = db.query("City", null, "county_name= ? ", new String[]{"" +
+                        countyName}, null, null,
+                null);
+        City city = new City();
+        if (cursor.moveToFirst()) {
+            city.setId(cursor.getInt(cursor.getColumnIndex("id")));
+            city.setProvinceName(cursor.getString(cursor.getColumnIndex("province_name")));
+            city.setCityName(cursor.getString(cursor.getColumnIndex("city_name")));
+            city.setCountyName(cursor.getString(cursor.getColumnIndex("county_name")));
+            city.setCityCode(cursor.getString(cursor.getColumnIndex("city_code")));
+        } else {
+            throw new RuntimeException("query error");
+        }
+        return city;
+    }
+
     public long saveMyCity(City myCity) {
         if (myCity != null) {
             ContentValues values = new ContentValues();
@@ -126,6 +143,10 @@ public class AnUmbrellaDB {
             throw new RuntimeException("query error");
         }
         return myCity;
+    }
+
+    public int deleteMyCity(int cityId) {
+        return db.delete("MyCity", "city_id = ?", new String[]{"" + cityId});
     }
 
     public void updateWeather(int id, String weather) {

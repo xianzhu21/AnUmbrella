@@ -1,7 +1,5 @@
 package io.github.xianzhuliu.anumbrella.model;
 
-import io.github.xianzhuliu.anumbrella.R;
-
 /**
  * Created by LiuXianzhu on 27/10/2016.
  * Contact: liuxianzhu0221@gmail.com
@@ -10,13 +8,14 @@ import io.github.xianzhuliu.anumbrella.R;
 public class MyCityBean {
     private String myCityName;
     private String myCityTmp;
+    private int myCityWeatherCode;
 
-    public int getMyCityImgResId() {
-        return R.drawable.weather_100;
+    public int getMyCityWeatherCode() {
+        return myCityWeatherCode;
     }
 
-    public void setMyCityImgResId(int myCityImgResId) {
-        this.myCityImgResId = myCityImgResId;
+    public void setMyCityWeatherCode(int myCityWeatherCode) {
+        this.myCityWeatherCode = myCityWeatherCode;
     }
 
     public String getMyCityTmp() {
@@ -35,11 +34,10 @@ public class MyCityBean {
         this.myCityName = myCityName;
     }
 
-    private int myCityImgResId;
 
-    public MyCityBean(String myCityName, String myCityTmp, int myCityImgResId) {
+    public MyCityBean(String myCityName, String myCityTmp, int myCityWeatherCode) {
         this.myCityName = myCityName;
         this.myCityTmp = myCityTmp;
-        this.myCityImgResId = myCityImgResId;
+        this.myCityWeatherCode = myCityWeatherCode;
     }
 }

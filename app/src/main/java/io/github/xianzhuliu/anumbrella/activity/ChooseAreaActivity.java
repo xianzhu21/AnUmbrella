@@ -27,6 +27,7 @@ import java.util.Set;
 import io.github.xianzhuliu.anumbrella.R;
 import io.github.xianzhuliu.anumbrella.db.AnUmbrellaDB;
 import io.github.xianzhuliu.anumbrella.model.City;
+import io.github.xianzhuliu.anumbrella.model.MyCity;
 import io.github.xianzhuliu.anumbrella.util.HttpCallbackListener;
 import io.github.xianzhuliu.anumbrella.util.HttpUtil;
 import io.github.xianzhuliu.anumbrella.util.Utility;
@@ -77,14 +78,33 @@ public class ChooseAreaActivity extends Activity {
                 } else if (currentLevel == LEVEL_COUNTY) {
                     City city = countyList.get(position);
                     final int myCityId = (int) anUmbrellaDB.saveMyCity(city);
+                    List<MyCity> myCityList = anUmbrellaDB.loadMyCities();
+                    for (MyCity myCity : myCityList) {
+                        if (myCity.getCityId() == myCityId) {
+                            Toast.makeText(ChooseAreaActivity.this, "已经存在" + anUmbrellaDB.findCityById(myCityId) +
+                                    "，请不要重复添加·_·", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                    }
                     String address = "https://api.heweather.com/x3/weather?cityid=" + city.getCityCode() +
                             "&key=b722b324cb4a43c39bd1ca487cc89d7c";
                     HttpUtil.sendOkHttp(address, new HttpCallbackListener() {
                         @Override
                         public void onFinish(String response) {
                             try {
-                                Utility.handleWeatherResponse(ChooseAreaActivity.this, new JSONObject(response),
-                                        myCityId);
+                                if (!Utility.handleWeatherResponse(ChooseAreaActivity.this, new JSONObject(response),
+                                        myCityId)) {
+
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Toast.makeText(ChooseAreaActivity.this, "貌似网络出问题了~_~", Toast
+                                                    .LENGTH_SHORT).show();
+                                        }
+                                    });
+                                } else {
+                                    finish();
+                                }
                             } catch (JSONException e) {
                                 e.printStackTrace();
                             } catch (IOException e) {
@@ -94,9 +114,10 @@ public class ChooseAreaActivity extends Activity {
 
                         @Override
                         public void onError(Exception e) {
+                            finish();
                         }
                     });
-                    finish();
+
                 }
             }
         });

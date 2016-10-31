@@ -8,6 +8,7 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -28,6 +29,7 @@ import java.util.List;
 
 import io.github.xianzhuliu.anumbrella.R;
 import io.github.xianzhuliu.anumbrella.db.AnUmbrellaDB;
+import io.github.xianzhuliu.anumbrella.model.City;
 import io.github.xianzhuliu.anumbrella.model.MyCity;
 import io.github.xianzhuliu.anumbrella.model.Weather;
 import io.github.xianzhuliu.anumbrella.service.AutoUpdateService;
@@ -71,7 +73,8 @@ public class MainActivity extends AppCompatActivity
         anUmbrellaDB = AnUmbrellaDB.getInstance(this);
         myCityList = anUmbrellaDB.loadMyCities();
         if (myCityList.isEmpty()) {
-            weatherDespText.setText("请先添加城市。");
+            tempText.setText("请先添加城市");
+            initDrawerLayout();
         } else {
             showWeather();
         }
@@ -132,25 +135,35 @@ public class MainActivity extends AppCompatActivity
     private void queryWeatherInfo(String cityCode) {
         String address = "https://api.heweather.com/x3/weather?cityid=" + cityCode +
                 "&key=b722b324cb4a43c39bd1ca487cc89d7c";
+        Log.d(TAG, "queryWeatherInfo: cityCode=" + cityCode);
         HttpUtil.sendOkHttp(address, new HttpCallbackListener() {
             @Override
             public void onFinish(String response) {
+                boolean success = false;
                 try {
-                    Utility.handleWeatherResponse(MainActivity.this, new JSONObject(response), myCityList.get(0)
-                            .getId());
+                    success = Utility.handleWeatherResponse(MainActivity.this, new JSONObject(response), myCityList
+                            .get(0).getId());
                 } catch (JSONException e) {
                     e.printStackTrace();
                     new RuntimeException("JSONException");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        showWeather();
-                    }
-                });
+                if (success) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            showWeather();
+                        }
+                    });
+                } else {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "貌似网络出问题了~_~", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
             }
 
             @Override
@@ -166,18 +179,23 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void showWeather() {
+        City city = anUmbrellaDB.findCityById(myCityList.get(0).getCityId());
+        toolbar.setTitle(city.getCountyName());
+        cityCode = city.getCityCode();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy年M月d日");
         Gson gson = new Gson();
         weather = gson.fromJson(myCityList.get(0).getWeather(), Weather.class);
-        toolbar.setTitle(weather.basic.city);
-        tempText.setText(weather.daily_forecast.get(0).tmp.min + "°C ~ " + weather.daily_forecast.get(0).tmp.max +
-                "°C");
-        weatherDespText.setText(weather.now.cond.txt + " " + weather.now.tmp + "°C");
-        publishText.setText(weather.basic.update.loc + "发布");
-        imgWeather.setImageResource(WeatherCode.getWeatherCode(Integer.parseInt(weather.now.cond.code)));
-        currentDateText.setText(simpleDateFormat.format(new Date()));
-        weatherInfoLayout.setVisibility(View.VISIBLE);
-        cityCode = weather.basic.id;
+        if (weather == null) {
+            Toast.makeText(this, "貌似网络断开了，请连接网络后刷新~_~", Toast.LENGTH_SHORT).show();
+        } else {
+            tempText.setText(weather.daily_forecast.get(0).tmp.min + "°C ~ " + weather.daily_forecast.get(0).tmp.max +
+                    "°C");
+            weatherDespText.setText(weather.now.cond.txt + " " + weather.now.tmp + "°C");
+            publishText.setText(weather.basic.update.loc + "发布");
+            imgWeather.setImageResource(WeatherCode.getWeatherCode(Integer.parseInt(weather.now.cond.code)));
+            currentDateText.setText(simpleDateFormat.format(new Date()));
+            weatherInfoLayout.setVisibility(View.VISIBLE);
+        }
         initDrawerLayout();
         Intent service = new Intent(this, AutoUpdateService.class);
         startService(service);

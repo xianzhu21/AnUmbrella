@@ -2,7 +2,7 @@ package io.github.xianzhuliu.anumbrella.util;
 
 import android.content.Context;
 import android.text.TextUtils;
-import android.util.Log;
+import android.util.TypedValue;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -39,13 +39,20 @@ public class Utility {
         return false;
     }
 
-    public static void handleWeatherResponse(Context context, JSONObject response, int myCityId) throws JSONException, IOException {
+    public static boolean handleWeatherResponse(Context context, JSONObject response, int myCityId) throws
+            JSONException, IOException {
         JSONObject weatherInfo = response.getJSONArray("HeWeather data service 3.0").getJSONObject(0);
         if (weatherInfo.getString("status").equals("ok")) {
             AnUmbrellaDB anUmbrellaDB = AnUmbrellaDB.getInstance(context);
             anUmbrellaDB.updateWeather(myCityId, weatherInfo.toString());
+            return true;
         } else {
-            Log.e(TAG, "handleWeatherResponse: weatherInfo is error", new RuntimeException());
+            return false;
         }
+    }
+
+    public static int dp2px(Context context, int dp) {
+        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp,
+                context.getResources().getDisplayMetrics());
     }
 }

@@ -14,9 +14,8 @@
     tools:context="io.github.xianzhuliu.anumbrella.activity.CityActivity"
     tools:showIn="@layout/activity_city">
 
-    <ListView
+    <com.baoyz.swipemenulistview.SwipeMenuListView
         android:id="@+id/lv_city"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-    </ListView>
+        android:layout_height="match_parent"/>
 </RelativeLayout>

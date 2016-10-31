@@ -6,9 +6,14 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
-import android.widget.ListView;
+import android.widget.Toast;
 
+import com.baoyz.swipemenulistview.SwipeMenu;
+import com.baoyz.swipemenulistview.SwipeMenuCreator;
+import com.baoyz.swipemenulistview.SwipeMenuItem;
+import com.baoyz.swipemenulistview.SwipeMenuListView;
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
@@ -21,9 +26,12 @@ import io.github.xianzhuliu.anumbrella.model.City;
 import io.github.xianzhuliu.anumbrella.model.MyCity;
 import io.github.xianzhuliu.anumbrella.model.MyCityBean;
 import io.github.xianzhuliu.anumbrella.model.Weather;
+import io.github.xianzhuliu.anumbrella.util.Utility;
 import io.github.xianzhuliu.anumbrella.util.WeatherCode;
 
 public class CityActivity extends AppCompatActivity {
+
+    private static final String TAG = "CityActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,14 +54,15 @@ public class CityActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        AnUmbrellaDB anUmbrellaDB = AnUmbrellaDB.getInstance(this);
+        final AnUmbrellaDB anUmbrellaDB = AnUmbrellaDB.getInstance(this);
         List<MyCity> myCityList = anUmbrellaDB.loadMyCities();
-        List<MyCityBean> beanList = new ArrayList<>();
+        final List<MyCityBean> beanList = new ArrayList<>();
         for (MyCity myCity : myCityList) {
             City city = anUmbrellaDB.findCityById(myCity.getCityId());
             String tmp = ""; // 气温
             int cond = -1; // 天气情况图
             String weatherInfo = myCity.getWeather();
+            Log.d(TAG, "onStart: weatherInfo=" + weatherInfo);
             if (!TextUtils.isEmpty(weatherInfo)) {
                 Gson gson = new Gson();
                 Weather weather = gson.fromJson(weatherInfo, Weather.class);
@@ -63,7 +72,40 @@ public class CityActivity extends AppCompatActivity {
             beanList.add(new MyCityBean(city.getCountyName(), tmp + "°C", cond));
         }
 
-        ListView listView = (ListView) findViewById(R.id.lv_city);
-        listView.setAdapter(new MyCityAdapter(this, beanList));
+        SwipeMenuCreator creator = new SwipeMenuCreator() {
+            @Override
+            public void create(SwipeMenu menu) {
+                SwipeMenuItem deleteItem = new SwipeMenuItem(getApplicationContext());
+                deleteItem.setBackground(R.color.colorRed);
+                deleteItem.setWidth(Utility.dp2px(getApplicationContext(), 80));
+                deleteItem.setIcon(R.drawable.ic_delete);
+                menu.addMenuItem(deleteItem);
+            }
+        };
+        SwipeMenuListView listView = (SwipeMenuListView) findViewById(R.id.lv_city);
+        final MyCityAdapter myCityAdapter = new MyCityAdapter(this, beanList);
+        listView.setAdapter(myCityAdapter);
+        listView.setMenuCreator(creator);
+        listView.setOnMenuItemClickListener(new SwipeMenuListView.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(int position, SwipeMenu menu, int index) {
+                switch (index) {
+                    case 0:
+                        String cityName = beanList.get(position).getMyCityName();
+
+                        City city = anUmbrellaDB.findCityByName(cityName);
+                        if (anUmbrellaDB.deleteMyCity(city.getId()) != 0) {
+                            Toast.makeText(CityActivity.this, "已删除" + cityName, Toast.LENGTH_SHORT).show();
+                            beanList.remove(position);
+                            myCityAdapter.notifyDataSetChanged();
+                        } else {
+                            Toast.makeText(CityActivity.this, "删除" + cityName + "失败，给作者吐槽下吧", Toast.LENGTH_SHORT)
+                                    .show();
+                        }
+                        break;
+                }
+                return false;
+            }
+        });
     }
 }
