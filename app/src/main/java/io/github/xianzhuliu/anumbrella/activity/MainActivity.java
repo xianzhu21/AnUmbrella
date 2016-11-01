@@ -114,7 +114,6 @@ public class MainActivity extends AppCompatActivity
         //noinspection SimplifiableIfStatement
         if (id == R.id.update_weather) {
             queryWeatherInfo(cityCode);
-            Toast.makeText(this, "已更新天气 ^__^", Toast.LENGTH_SHORT).show();
         }
 
         return super.onOptionsItemSelected(item);
@@ -202,6 +201,7 @@ public class MainActivity extends AppCompatActivity
             imgWeather.setImageResource(WeatherCode.getWeatherCode(Integer.parseInt(weather.now.cond.code)));
             currentDateText.setText(simpleDateFormat.format(new Date()));
             weatherInfoLayout.setVisibility(View.VISIBLE);
+            Toast.makeText(this, "已更新天气 ^__^", Toast.LENGTH_SHORT).show();
         }
         initDrawerLayout();
         Intent service = new Intent(this, AutoUpdateService.class);

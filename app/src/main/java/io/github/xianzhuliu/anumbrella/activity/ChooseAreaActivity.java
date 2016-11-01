@@ -1,14 +1,14 @@
 package io.github.xianzhuliu.anumbrella.activity;
 
-import android.app.Activity;
 import android.app.ProgressDialog;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
+import android.view.MenuItem;
 import android.view.View;
-import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONException;
@@ -37,15 +37,15 @@ import io.github.xianzhuliu.anumbrella.util.Utility;
  * Contact: liuxianzhu0221@gmail.com
  */
 
-public class ChooseAreaActivity extends Activity {
+public class ChooseAreaActivity extends AppCompatActivity {
     private static final String TAG = "ChooseAreaActivity";
     public static final int LEVEL_PROVINCE = 0;
     public static final int LEVEL_CITY = 1;
     public static final int LEVEL_COUNTY = 2;
 
     private ProgressDialog progressDialog;
-    private TextView titleText;
     private ListView listView;
+    private Toolbar toolbar;
     private ArrayAdapter<String> adapter;
     private AnUmbrellaDB anUmbrellaDB;
     private List<String> dataList = new ArrayList<>();
@@ -54,15 +54,13 @@ public class ChooseAreaActivity extends Activity {
     private String selectedProvince;
     private String selectedCity;
     private int currentLevel;
-    private boolean isFromWeatherActivity;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        setContentView(R.layout.choose_area);
+        setContentView(R.layout.activity_choose_area);
+        toolbar = (Toolbar) findViewById(R.id.choose_area_toolbar);
         listView = (ListView) findViewById(R.id.list_view);
-        titleText = (TextView) findViewById(R.id.title_text);
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, dataList);
         listView.setAdapter(adapter);
         anUmbrellaDB = AnUmbrellaDB.getInstance(this);
@@ -140,7 +138,8 @@ public class ChooseAreaActivity extends Activity {
             dataList.addAll(set);
             adapter.notifyDataSetChanged();
             listView.setSelection(0);
-            titleText.setText(selectedCity);
+            toolbar.setTitle(selectedCity);
+            setSupportActionBar(toolbar);
             currentLevel = LEVEL_COUNTY;
         } else {
             queryFromServer("county");
@@ -165,7 +164,8 @@ public class ChooseAreaActivity extends Activity {
             Collections.sort(dataList, collatorChinese);
             adapter.notifyDataSetChanged();
             listView.setSelection(0);
-            titleText.setText(selectedProvince);
+            toolbar.setTitle(selectedProvince);
+            setSupportActionBar(toolbar);
             currentLevel = LEVEL_CITY;
         } else {
             queryFromServer("city");
@@ -185,7 +185,9 @@ public class ChooseAreaActivity extends Activity {
             dataList.addAll(set);
             adapter.notifyDataSetChanged();
             listView.setSelection(0);
-            titleText.setText("中国");
+            toolbar.setTitle("中国");
+            setSupportActionBar(toolbar);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             currentLevel = LEVEL_PROVINCE;
         } else {
             queryFromServer("province");
@@ -254,5 +256,14 @@ public class ChooseAreaActivity extends Activity {
         } else {
             super.onBackPressed();
         }
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) { // ToolBar的返回按钮
+            onBackPressed();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 }
