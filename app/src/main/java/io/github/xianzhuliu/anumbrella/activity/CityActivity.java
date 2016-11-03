@@ -6,6 +6,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Toast;
@@ -59,6 +60,10 @@ public class CityActivity extends AppCompatActivity {
         List<MyCity> myCityList = anUmbrellaDB.loadMyCities();
         final List<MyCityBean> beanList = new ArrayList<>();
         for (MyCity myCity : myCityList) {
+            if (myCity.getCityId() == -1) {
+                // 没有定位的城市
+                continue;
+            }
             City city = anUmbrellaDB.findCityById(myCity.getCityId());
             String tmp = ""; // 气温
             int cond = -1; // 天气情况图
@@ -92,15 +97,33 @@ public class CityActivity extends AppCompatActivity {
                 switch (index) {
                     case 0:
                         String cityName = beanList.get(position).getMyCityName();
-
                         City city = anUmbrellaDB.findCityByName(cityName);
-                        if (anUmbrellaDB.deleteMyCity(city.getId()) != 0) {
+                        MyCity myCity = anUmbrellaDB.findMyCityByCityId(city.getId());
+                        Log.d(TAG, "onMenuItemClick: id===" + myCity.getId());
+                        if (myCity.getId() == 1) {
+                            // 存定位城市的记录不删除
+                            anUmbrellaDB.updateMyCity(1, -1);
                             Toast.makeText(CityActivity.this, "已删除" + cityName, Toast.LENGTH_SHORT).show();
                             beanList.remove(position);
+                            MainActivity.selectedCity = 1;
                             myCityAdapter.notifyDataSetChanged();
                         } else {
-                            Toast.makeText(CityActivity.this, "删除" + cityName + "失败，给作者吐槽下吧", Toast.LENGTH_SHORT)
-                                    .show();
+                            if (position == beanList.size() - 1) {
+                                // 删除了最后一个，更新MainActivity.selectedCity，防止out of index
+                                if (anUmbrellaDB.findMyCityById(1).getCityId() != -1) {
+                                    MainActivity.selectedCity = 0;
+                                } else {
+                                    MainActivity.selectedCity = 1;
+                                }
+                            }
+                            if (anUmbrellaDB.deleteMyCity(city.getId()) != 0) {
+                                Toast.makeText(CityActivity.this, "已删除" + cityName, Toast.LENGTH_SHORT).show();
+                                beanList.remove(position);
+                                myCityAdapter.notifyDataSetChanged();
+                            } else {
+                                Toast.makeText(CityActivity.this, "删除" + cityName + "失败，给作者吐槽下吧", Toast
+                                        .LENGTH_SHORT).show();
+                            }
                         }
                         break;
                 }
@@ -110,7 +133,14 @@ public class CityActivity extends AppCompatActivity {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                MainActivity.selectedCity = position;
+                String cityName = beanList.get(position).getMyCityName();
+                City city = anUmbrellaDB.findCityByName(cityName);
+                MyCity myCity = anUmbrellaDB.findMyCityByCityId(city.getId());
+                if (myCity.getCityId() == -1) {
+                    MainActivity.selectedCity = position + 1;
+                } else {
+                    MainActivity.selectedCity = position;
+                }
                 finish();
             }
         });

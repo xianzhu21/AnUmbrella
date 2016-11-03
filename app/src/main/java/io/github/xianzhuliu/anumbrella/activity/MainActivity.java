@@ -1,11 +1,14 @@
 package io.github.xianzhuliu.anumbrella.activity;
 
+import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -17,6 +20,10 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.amap.api.location.AMapLocation;
+import com.amap.api.location.AMapLocationClient;
+import com.amap.api.location.AMapLocationClientOption;
+import com.amap.api.location.AMapLocationListener;
 import com.google.gson.Gson;
 
 import org.json.JSONException;
@@ -47,44 +54,166 @@ public class MainActivity extends AppCompatActivity
     private TextView tempText;
     private TextView currentDateText;
     private ImageView imgWeather;
+    private ProgressDialog progressDialog;
     private Weather weather;
     private String cityCode;
     private Toolbar toolbar;
     private List<MyCity> myCityList;
     private AnUmbrellaDB anUmbrellaDB;
     public static int selectedCity = 0;
+    private AMapLocationClient mLocationClient;
+    private AMapLocationListener mLocationListener;
+    private AMapLocationClientOption mLocationOption;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        initView();
+        anUmbrellaDB = AnUmbrellaDB.getInstance(this);
+        if (anUmbrellaDB.loadCities().isEmpty()) {
+            cityInfoToSql();
+        } else {
+            if (true) {
+                // 根据设置
+                initAMap();
+            }
+        }
+    }
+
+    private void initView() {
         toolbar = (Toolbar) findViewById(R.id.main_toolbar);
-
-
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
-
         weatherInfoLayout = (LinearLayout) findViewById(R.id.weather_info_layout);
         publishText = (TextView) findViewById(R.id.publish_text);
         weatherDespText = (TextView) findViewById(R.id.weather_desp);
         tempText = (TextView) findViewById(R.id.temp);
         currentDateText = (TextView) findViewById(R.id.current_date);
         imgWeather = (ImageView) findViewById(R.id.img_weather);
+    }
 
-        anUmbrellaDB = AnUmbrellaDB.getInstance(this);
+    private void initAMap() {
+        mLocationListener = new AMapLocationListener() {
+            @Override
+            public void onLocationChanged(AMapLocation aMapLocation) {
+                if (aMapLocation != null) {
+                    if (aMapLocation.getErrorCode() == 0) {
+                        final String cityName = aMapLocation.getCity();
+                        String district = aMapLocation.getDistrict();
+                        final City city = anUmbrellaDB.findCityFromLocation(cityName.substring(0, cityName.length() -
+                                1), district.substring(0, district.length() - 1));
+                        MyCity myCity = anUmbrellaDB.findMyCityById(1);
+                        if (city != null && myCity.getCityId() != city.getId()) {
+                            AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
+                            dialog.setTitle("我猜你现在在" + city.getCountyName() + "~\n要关注" + city.getCountyName() +
+                                    "的天气吗？");
+                            dialog.setCancelable(false); // 通过back键取消
+                            dialog.setPositiveButton("好好", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    anUmbrellaDB.updateMyCity(1, city.getId());
+                                    cityCode = city.getCityCode();
+                                    queryWeatherInfo(cityCode);
+                                }
+                            });
+                            dialog.setNegativeButton("不了", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
 
+                                }
+                            });
+                            dialog.show();
+                        }
+                    } else {
+                        //定位失败时，可通过ErrCode（错误码）信息来确定失败的原因，errInfo是错误信息，详见错误码表。
+                        Log.e("AmapError", "location Error, ErrCode:"
+                                + aMapLocation.getErrorCode() + ", errInfo:"
+                                + aMapLocation.getErrorInfo());
+                    }
+                }
+            }
+        };
+        //初始化定位
+        mLocationClient = new AMapLocationClient(getApplicationContext());
+        //设置定位回调监听
+        mLocationClient.setLocationListener(mLocationListener);
+        mLocationOption = new AMapLocationClientOption();
+        mLocationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Battery_Saving);
+        mLocationOption.setOnceLocationLatest(true);
+        mLocationClient.setLocationOption(mLocationOption);
+        mLocationClient.startLocation();
+    }
+
+    private void cityInfoToSql() {
+        showProgressDialog();
+        HttpUtil.getCitiesFromFile(MainActivity.this, new HttpCallbackListener() {
+            @Override
+            public void onFinish(String response) {
+                boolean result;
+                result = Utility.handleCitiesResponse(anUmbrellaDB, response);
+                if (result) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            closeProgressDialog();
+                            initAMap();
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onError(Exception e) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        closeProgressDialog();
+                        Toast.makeText(MainActivity.this, "城市信息加载失败，请尝试重新启动应用i_i", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
+    }
+
+    private void showProgressDialog() {
+        if (progressDialog == null) {
+            progressDialog = new ProgressDialog(this);
+            progressDialog.setMessage("第一次需要加载城市信息\n请稍等...");
+            progressDialog.setCanceledOnTouchOutside(false);
+        }
+        progressDialog.show();
+    }
+
+    private void closeProgressDialog() {
+        if (progressDialog != null) {
+            progressDialog.dismiss();
+        }
     }
 
     @Override
     protected void onStart() {
         super.onStart();
         myCityList = anUmbrellaDB.loadMyCities();
-        if (myCityList.isEmpty()) {
-            tempText.setText("请先添加城市");
+        if (myCityList.size() == 1 && myCityList.get(0).getCityId() == -1) {
+            currentDateText.setText("请先添加城市");
             initDrawerLayout();
         } else {
-            showWeather();
+            Log.d(TAG, "onStart: myCityid == " + myCityList.get(selectedCity).getId() + "\n cityId == " + myCityList
+                    .get(selectedCity).getCityId());
+            City city = anUmbrellaDB.findCityById(myCityList.get(selectedCity).getCityId());
+            toolbar.setTitle(city.getCountyName());
+            cityCode = city.getCityCode();
+            queryWeatherInfo(cityCode);
         }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mLocationClient.onDestroy();
     }
 
     @Override
@@ -110,8 +239,6 @@ public class MainActivity extends AppCompatActivity
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
         if (id == R.id.update_weather) {
             queryWeatherInfo(cityCode);
         }
@@ -141,7 +268,6 @@ public class MainActivity extends AppCompatActivity
     private void queryWeatherInfo(String cityCode) {
         String address = "https://api.heweather.com/x3/weather?cityid=" + cityCode +
                 "&key=b722b324cb4a43c39bd1ca487cc89d7c";
-        Log.d(TAG, "queryWeatherInfo: cityCode=" + cityCode);
         HttpUtil.sendOkHttp(address, new HttpCallbackListener() {
             @Override
             public void onFinish(String response) {
@@ -166,7 +292,7 @@ public class MainActivity extends AppCompatActivity
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(MainActivity.this, "貌似网络出问题了~_~", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MainActivity.this, "貌似服务器出问题了~_~", Toast.LENGTH_SHORT).show();
                         }
                     });
                 }
@@ -177,7 +303,7 @@ public class MainActivity extends AppCompatActivity
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        publishText.setText("更新失败，请检查网络后重试。");
+                        Toast.makeText(MainActivity.this, "更新失败，请检查网络后重试。", Toast.LENGTH_SHORT).show();
                     }
                 });
             }
@@ -185,19 +311,17 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void showWeather() {
-        City city = anUmbrellaDB.findCityById(myCityList.get(selectedCity).getCityId());
-        toolbar.setTitle(city.getCountyName());
-        cityCode = city.getCityCode();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy年M月d日");
         Gson gson = new Gson();
         weather = gson.fromJson(myCityList.get(selectedCity).getWeather(), Weather.class);
         if (weather == null) {
-            Toast.makeText(this, "貌似网络断开了，请连接网络后刷新~_~", Toast.LENGTH_SHORT).show();
+            queryWeatherInfo(cityCode);
         } else {
-            tempText.setText(weather.daily_forecast.get(0).tmp.min + "°C ~ " + weather.daily_forecast.get(0).tmp.max +
-                    "°C");
+            tempText.setText(weather.daily_forecast.get(0).tmp.min + "°C ~ " + weather.daily_forecast.get(0).tmp.max
+                    + "°C");
             weatherDespText.setText(weather.now.cond.txt + " " + weather.now.tmp + "°C");
-            publishText.setText(weather.basic.update.loc + "发布");
+            String publishTime = weather.basic.update.loc;
+            publishText.setText(publishTime.substring(publishTime.length() - 11) + " 发布");
             imgWeather.setImageResource(WeatherCode.getWeatherCode(Integer.parseInt(weather.now.cond.code)));
             currentDateText.setText(simpleDateFormat.format(new Date()));
             weatherInfoLayout.setVisibility(View.VISIBLE);
@@ -205,7 +329,7 @@ public class MainActivity extends AppCompatActivity
         }
         initDrawerLayout();
         Intent service = new Intent(this, AutoUpdateService.class);
-        startService(service);
+        //startService(service);
     }
 
     private void initDrawerLayout() {

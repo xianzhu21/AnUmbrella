@@ -8,8 +8,6 @@ import android.os.IBinder;
 import android.os.SystemClock;
 import android.support.annotation.Nullable;
 
-import com.google.gson.Gson;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -18,7 +16,6 @@ import java.util.List;
 
 import io.github.xianzhuliu.anumbrella.db.AnUmbrellaDB;
 import io.github.xianzhuliu.anumbrella.model.MyCity;
-import io.github.xianzhuliu.anumbrella.model.Weather;
 import io.github.xianzhuliu.anumbrella.util.HttpCallbackListener;
 import io.github.xianzhuliu.anumbrella.util.HttpUtil;
 import io.github.xianzhuliu.anumbrella.util.Utility;
@@ -56,9 +53,10 @@ public class AutoUpdateService extends Service {
         AnUmbrellaDB anUmbrellaDB = AnUmbrellaDB.getInstance(this);
         List<MyCity> myCityList = anUmbrellaDB.loadMyCities();
         for (final MyCity myCity : myCityList) {
-            Gson gson = new Gson();
-            Weather weather = gson.fromJson(myCity.getWeather(), Weather.class);
-
+            if (myCity.getCityId() == -1) {
+                // 没有自动定位的城
+                continue;
+            }
             String cityCode = anUmbrellaDB.findCityById(myCity.getCityId()).getCityCode();
             String address = "https://api.heweather.com/x3/weather?cityid=" + cityCode +
                     "&key=b722b324cb4a43c39bd1ca487cc89d7c";

@@ -1,5 +1,6 @@
 package io.github.xianzhuliu.anumbrella.db;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -30,6 +31,9 @@ public class AnUmbrellaOpenHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         db.execSQL(CREATE_CITY);
         db.execSQL(CREATE_MY_CITY);
+        ContentValues values = new ContentValues();
+        values.put("city_id", -1); // id为1的位置存储自动定位的城市，city_id为-1说明没有定位的城市
+        db.insert("MyCity", null, values);
     }
 
     @Override

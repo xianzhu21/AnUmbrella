@@ -17,6 +17,7 @@ import io.github.xianzhuliu.anumbrella.model.MyCity;
  */
 
 public class AnUmbrellaDB {
+    private static final String TAG = "AnUmbrellaDB";
     public static final String DB_NAME = "an_umbrella";
 
     public static final int VERSION = 1;
@@ -39,7 +40,15 @@ public class AnUmbrellaDB {
         return anUmbrellaDB;
     }
 
-
+    private City createCityFromCursor(Cursor cursor) {
+        City city = new City();
+        city.setId(cursor.getInt(cursor.getColumnIndex("id")));
+        city.setProvinceName(cursor.getString(cursor.getColumnIndex("province_name")));
+        city.setCityName(cursor.getString(cursor.getColumnIndex("city_name")));
+        city.setCountyName(cursor.getString(cursor.getColumnIndex("county_name")));
+        city.setCityCode(cursor.getString(cursor.getColumnIndex("city_code")));
+        return city;
+    }
     public void saveCity(City city) {
         if (city != null) {
             ContentValues values = new ContentValues();
@@ -58,12 +67,7 @@ public class AnUmbrellaDB {
         Cursor cursor = db.query("City", null, null, null, null, null, null);
         if (cursor.moveToFirst()) {
             do {
-                City city = new City();
-                city.setId(cursor.getInt(cursor.getColumnIndex("id")));
-                city.setProvinceName(cursor.getString(cursor.getColumnIndex("province_name")));
-                city.setCityName(cursor.getString(cursor.getColumnIndex("city_name")));
-                city.setCountyName(cursor.getString(cursor.getColumnIndex("county_name")));
-                city.setCityCode(cursor.getString(cursor.getColumnIndex("city_code")));
+                City city = createCityFromCursor(cursor);
                 list.add(city);
             } while (cursor.moveToNext());
         }
@@ -74,24 +78,35 @@ public class AnUmbrellaDB {
     }
 
     public City findCityById(int id) {
-        Cursor cursor = db.query("City", null, "id= ? ", new String[]{"" +
-                        id}, null, null,
-                null);
-        City city = new City();
+        Cursor cursor = db.query("City", null, "id = ? ", new String[]{"" + id}, null, null, null);
+        City city;
         if (cursor.moveToFirst()) {
-            city.setId(cursor.getInt(cursor.getColumnIndex("id")));
-            city.setProvinceName(cursor.getString(cursor.getColumnIndex("province_name")));
-            city.setCityName(cursor.getString(cursor.getColumnIndex("city_name")));
-            city.setCountyName(cursor.getString(cursor.getColumnIndex("county_name")));
-            city.setCityCode(cursor.getString(cursor.getColumnIndex("city_code")));
+            city = createCityFromCursor(cursor);
         } else {
             throw new RuntimeException("query error");
+        }
+        cursor.close();
+        return city;
+    }
+
+    public City findCityFromLocation(String cityName, String district) {
+        Cursor cursor = db.query("City", null, "city_name = ? AND county_name LIKE ?", new String[]{cityName,
+                "%" + district + "%"}, null, null, null);
+        City city = null;
+        if (cursor.moveToFirst()) {
+            city = createCityFromCursor(cursor);
+        } else {
+            cursor = db.query("City", null, "city_name = ? AND county_name LIKE ?", new String[]{cityName, cityName},
+                    null, null, null);
+            if (cursor.moveToFirst()) {
+                city = createCityFromCursor(cursor);
+            }
         }
         return city;
     }
 
     public City findCityByName(String countyName) {
-        Cursor cursor = db.query("City", null, "county_name= ? ", new String[]{"" +
+        Cursor cursor = db.query("City", null, "county_name = ? ", new String[]{"" +
                         countyName}, null, null,
                 null);
         City city = new City();
@@ -104,21 +119,25 @@ public class AnUmbrellaDB {
         } else {
             throw new RuntimeException("query error");
         }
+        cursor.close();
         return city;
     }
 
     public long saveMyCity(City myCity) {
+        db.beginTransaction();
+        ContentValues values = new ContentValues();
         if (myCity != null) {
-            ContentValues values = new ContentValues();
             values.put("city_id", myCity.getId());
-            return db.insert("MyCity", null, values);
+            db.setTransactionSuccessful();
         } else {
             throw new NullPointerException("myCity is null");
         }
+        db.endTransaction();
+        return db.insert("MyCity", null, values);
     }
 
     public MyCity findMyCityById(int id) {
-        Cursor cursor = db.query("MyCity", null, "id= ? ", new String[]{"" + id}, null, null, null);
+        Cursor cursor = db.query("MyCity", null, "id = ? ", new String[]{"" + id}, null, null, null);
         MyCity myCity = new MyCity();
         if (cursor.moveToFirst()) {
             myCity.setId(id);
@@ -131,7 +150,7 @@ public class AnUmbrellaDB {
     }
 
     public MyCity findMyCityByCityId(int cityId) {
-        Cursor cursor = db.query("MyCity", null, "city_id= ? ", new String[]{"" +
+        Cursor cursor = db.query("MyCity", null, "city_id = ? ", new String[]{"" +
                         cityId}, null, null,
                 null);
         MyCity myCity = new MyCity();
@@ -146,13 +165,29 @@ public class AnUmbrellaDB {
     }
 
     public int deleteMyCity(int cityId) {
-        return db.delete("MyCity", "city_id = ?", new String[]{"" + cityId});
+        db.beginTransaction();
+        int res = db.delete("MyCity", "city_id = ?", new String[]{"" + cityId});
+        db.setTransactionSuccessful();
+        db.endTransaction();
+        return res;
     }
 
     public void updateWeather(int id, String weather) {
+        db.beginTransaction();
         ContentValues values = new ContentValues();
         values.put("weather", weather);
         db.update("MyCity", values, "id = ?", new String[]{"" + id});
+        db.setTransactionSuccessful();
+        db.endTransaction();
+    }
+
+    public void updateMyCity(int id, int cityId) {
+        db.beginTransaction();
+        ContentValues values = new ContentValues();
+        values.put("city_id", cityId);
+        db.update("MyCity", values, "id = ?", new String[]{"" + id});
+        db.setTransactionSuccessful();
+        db.endTransaction();
     }
 
     public List<MyCity> loadMyCities() {

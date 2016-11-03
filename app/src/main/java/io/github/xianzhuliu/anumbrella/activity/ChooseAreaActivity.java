@@ -75,15 +75,15 @@ public class ChooseAreaActivity extends AppCompatActivity {
                     queryCounties();
                 } else if (currentLevel == LEVEL_COUNTY) {
                     City city = countyList.get(position);
-                    final int myCityId = (int) anUmbrellaDB.saveMyCity(city);
                     List<MyCity> myCityList = anUmbrellaDB.loadMyCities();
                     for (MyCity myCity : myCityList) {
-                        if (myCity.getCityId() == myCityId) {
-                            Toast.makeText(ChooseAreaActivity.this, "已经存在" + anUmbrellaDB.findCityById(myCityId) +
-                                    "，请不要重复添加·_·", Toast.LENGTH_SHORT).show();
+                        if (myCity.getCityId() == city.getId()) {
+                            Toast.makeText(ChooseAreaActivity.this, "已经存在" + city.getCountyName() +
+                                    "，请不要重复添加 ·_·", Toast.LENGTH_SHORT).show();
                             return;
                         }
                     }
+                    final int myCityId = (int) anUmbrellaDB.saveMyCity(city);
                     String address = "https://api.heweather.com/x3/weather?cityid=" + city.getCityCode() +
                             "&key=b722b324cb4a43c39bd1ca487cc89d7c";
                     HttpUtil.sendOkHttp(address, new HttpCallbackListener() {
