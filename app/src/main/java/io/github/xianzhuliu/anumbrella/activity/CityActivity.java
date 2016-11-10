@@ -8,7 +8,6 @@ import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.Toast;
 
 import com.baoyz.swipemenulistview.SwipeMenu;
@@ -56,7 +55,7 @@ public class CityActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        final AnUmbrellaDB anUmbrellaDB = AnUmbrellaDB.getInstance(this);
+        final AnUmbrellaDB anUmbrellaDB = AnUmbrellaDB.getInstance(getApplicationContext());
         List<MyCity> myCityList = anUmbrellaDB.loadMyCities();
         final List<MyCityBean> beanList = new ArrayList<>();
         for (MyCity myCity : myCityList) {
@@ -105,17 +104,8 @@ public class CityActivity extends AppCompatActivity {
                             anUmbrellaDB.updateMyCity(1, -1);
                             Toast.makeText(CityActivity.this, "已删除" + cityName, Toast.LENGTH_SHORT).show();
                             beanList.remove(position);
-                            MainActivity.selectedCity = 1;
                             myCityAdapter.notifyDataSetChanged();
                         } else {
-                            if (position == beanList.size() - 1) {
-                                // 删除了最后一个，更新MainActivity.selectedCity，防止out of index
-                                if (anUmbrellaDB.findMyCityById(1).getCityId() != -1) {
-                                    MainActivity.selectedCity = 0;
-                                } else {
-                                    MainActivity.selectedCity = 1;
-                                }
-                            }
                             if (anUmbrellaDB.deleteMyCity(city.getId()) != 0) {
                                 Toast.makeText(CityActivity.this, "已删除" + cityName, Toast.LENGTH_SHORT).show();
                                 beanList.remove(position);
@@ -125,23 +115,10 @@ public class CityActivity extends AppCompatActivity {
                                         .LENGTH_SHORT).show();
                             }
                         }
+                        MainActivity.sUpdateMyCity = true;
                         break;
                 }
                 return false;
-            }
-        });
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String cityName = beanList.get(position).getMyCityName();
-                City city = anUmbrellaDB.findCityByName(cityName);
-                MyCity myCity = anUmbrellaDB.findMyCityByCityId(city.getId());
-                if (myCity.getCityId() == -1) {
-                    MainActivity.selectedCity = position + 1;
-                } else {
-                    MainActivity.selectedCity = position;
-                }
-                finish();
             }
         });
     }

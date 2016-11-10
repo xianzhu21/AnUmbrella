@@ -84,6 +84,7 @@ public class ChooseAreaActivity extends AppCompatActivity {
                         }
                     }
                     final int myCityId = (int) anUmbrellaDB.saveMyCity(city);
+                    MainActivity.sUpdateMyCity = true;
                     String address = "https://api.heweather.com/x3/weather?cityid=" + city.getCityCode() +
                             "&key=b722b324cb4a43c39bd1ca487cc89d7c";
                     HttpUtil.sendOkHttp(address, new HttpCallbackListener() {
@@ -100,9 +101,8 @@ public class ChooseAreaActivity extends AppCompatActivity {
                                                     .LENGTH_SHORT).show();
                                         }
                                     });
-                                } else {
-                                    finish();
                                 }
+                                finish();
                             } catch (JSONException e) {
                                 e.printStackTrace();
                             } catch (IOException e) {
